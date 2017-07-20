@@ -1,0 +1,113 @@
+string asExe = Resolve("i686-elf-tools/i686-elf/bin/as.exe");
+string gccExe = Resolve("i686-elf-tools/bin/i686-elf-gcc.exe");
+string mkisofsExe = Resolve("isosys/mkisofs.exe");
+
+string buildFolder;
+
+string[] buildC = new string[]
+{
+	"kernel.c",
+	"terminal.c",
+	"keyboard.c",
+	"hu_scanmap.c",
+	"string.c",
+	"app.c"
+};
+
+void Run()
+{
+	buildFolder = Resolve("_BUILD_");
+	Mkdir(buildFolder);
+
+	Printl("Assembling bootloader..");
+	Asm("src/boot.s", Combine(buildFolder, "boot.o"));
+	
+	//Build C
+	Printl("Building kernel..");
+	List<string> filesToLink = new List<string>(){
+		Combine(buildFolder, "boot.o")
+	};
+	foreach(string s in buildC)
+	{
+		string outFile = Combine(buildFolder, Path.GetFileNameWithoutExtension(s) + ".o");
+		
+		Gcc("src/" + s, outFile);
+		
+		filesToLink.Add(outFile);
+	}
+	
+	//Link
+	Printl("Linking..");
+	{
+		Link(Combine(buildFolder, "OS.bin"), filesToLink.ToArray());
+	}
+	
+	Printl("Creating bootimage..");
+	Copy(Combine(buildFolder, "OS.bin"), "isosys/ImageFolder/boot/OS.bin");
+	CreateISO("boot_this.iso", "boot/grub/i386-pc/eltorito.img", "isosys/ImageFolder");
+	
+	Printl("Compilation finished.");
+}
+
+void Exit()
+{
+	DelDir(buildFolder);
+}
+
+void CreateISO(string iso, string bootloader, string dataFolder)
+{
+	Args args = new Args("-", " ");
+	args.Switch("relaxed-filenames", "J", "R");
+	args.Value("o", Quote(Resolve(iso)));
+	args.Value("b", Quote(bootloader));
+	args.Switch("no-emul-boot", "boot-info-table");
+	args.Value("boot-load-size", "4");
+	args.Param(Quote(Relative(WorkDir(), dataFolder)));
+	
+	if(!ExecEcho(mkisofsExe, args))
+		Terminate();
+}
+
+void Link(string output, params string[] files)
+{
+	output = Resolve(output);
+	
+	Args args = new Args("-", " ");
+	args.Value("T", Quote(Resolve("linker.ld")));
+	args.Value("o", Quote(output));
+	args.Switch("ffreestanding", "O2", "Wall", "Wextra", "nostdlib", "nostartfiles", "nodefaultlibs", "lgcc");
+	
+	foreach(string s in files)
+		args.Param(Quote(Resolve(s)));
+		
+	if(!ExecEcho(gccExe, args))
+		Terminate();
+}
+
+void Gcc(string inFile, string outFile)
+{
+	inFile = Resolve(inFile);
+	outFile = Resolve(outFile);
+
+	Args args = new Args("-", " ");
+	args.Value("c", Quote(inFile));
+	args.Value("o", Quote(outFile));
+	args.Param("-std=gnu99");
+	args.Switch("ffreestanding", "O2", "Wall", "Wextra", "nostdlib", "nostartfiles", "nodefaultlibs");
+	
+	if(!ExecEcho(gccExe, args))
+		Terminate();
+}
+
+void Asm(string inFile, string outFile)
+{
+	inFile = Resolve(inFile);
+	outFile = Resolve(outFile);
+	
+	Args args = new Args("-", " ");
+	args.Param(Quote(inFile));
+	args.Value("o", Quote(outFile));
+	
+	if(!ExecEcho(asExe, args))
+		Terminate();
+}
