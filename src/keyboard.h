@@ -11,8 +11,8 @@
 #define KEY_ESCAPE 0x01
 
 typedef struct {
-	char normal[256];
-	char shifted[256];
+	char normal[128];
+	char shifted[128];
 } scanmap;
 
 typedef struct {
