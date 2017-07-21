@@ -42,9 +42,20 @@ void Run()
 		Link(Combine(buildFolder, "OS.bin"), filesToLink.ToArray());
 	}
 	
-	Printl("Creating bootimage..");
-	Copy(Combine(buildFolder, "OS.bin"), "isosys/ImageFolder/boot/OS.bin");
-	CreateISO("boot_this.iso", "boot/grub/i386-pc/eltorito.img", "isosys/ImageFolder");
+	//ISO
+	{
+		Printl("Creating ISO bootimage..");
+		Copy(Combine(buildFolder, "OS.bin"), "isosys/ImageFolder/boot/OS.bin");
+		CreateISO("boot_this.iso", "boot/grub/i386-pc/eltorito.img", "isosys/ImageFolder");
+	}
+	
+	//IMG
+	{
+		Printl("Creating IMG bootimage..");
+		Copy(Combine(buildFolder, "OS.bin"), "imgsys/OS.bin");
+		if(!Exec(Resolve("imgsys/create_image.run"), "", true, true))
+			Terminate();
+	}
 	
 	Printl("Compilation finished.");
 }

@@ -1,0 +1,19 @@
+string imageTool = @"Mosa.Tool.CreateBootImage.exe";
+
+string cfgFile = Resolve("image_config.cfg");
+using(StreamWriter cfg = OpenTextFile(cfgFile))
+{
+	cfg.WriteLine("-img");
+	cfg.WriteLine("-fat32");
+	cfg.WriteLine("-volume BOOT");
+	cfg.WriteLine("-blocks 67000"); //???
+	cfg.WriteLine("-syslinux");
+	cfg.WriteLine("-mbr " + Resolve("syslinux/mbr.bin"));
+	cfg.WriteLine("-boot " + Resolve("syslinux/ldlinux.bin"));
+	cfg.WriteLine("-file " + Resolve("syslinux/ldlinux.sys") + " ldlinux.sys");
+	cfg.WriteLine("-file " + Resolve("syslinux/mboot.c32") + " mboot.c32");
+	cfg.WriteLine("-file " + Resolve("syslinux/syslinux.cfg") + " syslinux.cfg");
+	cfg.WriteLine("-file " + Resolve("OS.bin") + " OS.bin");
+}
+
+ExecEcho(imageTool, cfgFile + " " + Resolve("../boot_this.img"));
